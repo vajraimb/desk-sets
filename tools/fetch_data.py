@@ -5,7 +5,7 @@ Standard library only. No API key. Example:
 
     python tools/fetch_data.py                      # all 8 watchlist names, hourly
     python tools/fetch_data.py --tickers TSLA NVDA  # a subset
-    python tools/fetch_data.py --interval 1d --range 5y --bars 1300
+    python tools/fetch_data.py --interval 1d --bars 1300  # daily bars, ~5 years
 
 Each ticker is written to dist/data/<TICKER>.js as an ES module and the
 manifest dist/data/index.js is regenerated. The browser app never touches
