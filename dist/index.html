@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Desk SETS — 8-name US watchlist</title>
+  <meta name="description" content="A self-evolving grid-DCA research toy: a genetic algorithm breeds long-only grid strategies on real hourly candles for eight US equities, gates them out-of-sample, and paper-trades the survivor in your browser." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b0f14'/%3E%3Cpath d='M6 22 L12 14 L17 18 L26 8' stroke='%23f5b942' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='26' cy='8' r='3' fill='%232dd4bf'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div id="boot" class="boot" role="status">
+    <div class="boot-card">
+      <div class="brand-mark" aria-hidden="true"></div>
+      <div>
+        <div class="boot-title">Desk SETS</div>
+        <div class="boot-sub" id="bootMsg">Loading candles…</div>
+      </div>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true"></div>
+      <div class="brand-text">
+        <div class="brand-name">Desk SETS <span class="brand-tag">8-name US watchlist</span></div>
+        <div class="brand-sub">Self-evolving grid-DCA lab · research toy, not a broker</div>
+      </div>
+    </div>
+    <nav class="tickers" id="tickerTabs" aria-label="Ticker"></nav>
+  </header>
+
+  <section class="controls" aria-label="Controls">
+    <div class="ctl-group">
+      <button id="btnRun" class="btn primary" title="Space">Run</button>
+      <button id="btnStep" class="btn" title="→">Step</button>
+    </div>
+    <div class="ctl-group speed" id="speedGroup" role="group" aria-label="Speed">
+      <button class="btn chip" data-speed="1" title="1">1×</button>
+      <button class="btn chip" data-speed="2" title="2">2×</button>
+      <button class="btn chip" data-speed="4" title="3">4×</button>
+      <button class="btn chip" data-speed="8" title="4">8×</button>
+    </div>
+    <form class="ctl-group seed" id="seedForm">
+      <label for="seedInput">Seed</label>
+      <input id="seedInput" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" />
+      <button type="submit" class="btn">Reseed</button>
+    </form>
+    <div class="ctl-group status">
+      <span class="stat"><span class="k">Gen</span> <span class="v mono" id="genLabel">0</span></span>
+      <span class="stat"><span class="k">Stage</span> <span class="v" id="stageLabel">—</span></span>
+      <span class="stat"><span class="k">Bar</span> <span class="v mono" id="tfLabel">1h</span></span>
+    </div>
+  </section>
+
+  <main class="grid">
+    <section class="panel span-4" id="panelLoop">
+      <header class="panel-head"><h2>Evolution loop</h2><span class="hint" id="loopHint"></span></header>
+      <div class="loop">
+        <canvas id="cvLoop" class="cv square"></canvas>
+        <ol class="stages" id="stageList">
+          <li data-stage="0"><b>Observe</b><span>read the tape</span></li>
+          <li data-stage="1"><b>Hypothesize</b><span>8 immigrants</span></li>
+          <li data-stage="2"><b>Mutate</b><span>crossover + noise</span></li>
+          <li data-stage="3"><b>Backtest</b><span>train 70% · OOS 30%</span></li>
+          <li data-stage="4"><b>Select</b><span>elites survive</span></li>
+          <li data-stage="5"><b>Deploy</b><span>gate → paper</span></li>
+        </ol>
+      </div>
+      <dl class="kv" id="loopStats"></dl>
+    </section>
+
+    <section class="panel span-8" id="panelFitness">
+      <header class="panel-head"><h2>Fitness history</h2>
+        <span class="legend">
+          <i style="--c:var(--amber)"></i>best fitness
+          <i style="--c:var(--muted)"></i>mean
+          <i style="--c:var(--teal)"></i>leader OOS return
+        </span>
+      </header>
+      <canvas id="cvFitness" class="cv tall"></canvas>
+    </section>
+
+    <section class="panel span-7" id="panelPool">
+      <header class="panel-head"><h2>Gene pool</h2>
+        <span class="legend" id="speciesLegend"></span>
+      </header>
+      <canvas id="cvPool" class="cv pool" tabindex="0" aria-label="Gene pool. Click a node to inspect it."></canvas>
+      <div class="pool-foot">
+        <span class="hint">Node size = train fitness · ring = passes OOS gate · gold = deployed leader. Click a node to inspect, Esc to return to the leader.</span>
+      </div>
+    </section>
+
+    <section class="panel span-5" id="panelGenome">
+      <header class="panel-head"><h2>Genome inspector</h2><span class="hint" id="genomeWho"></span></header>
+      <div id="genomeBody" class="genome"></div>
+    </section>
+
+    <section class="panel span-8" id="panelPaper">
+      <header class="panel-head"><h2>Paper grid</h2>
+        <span class="hint" id="paperHint"></span>
+        <button class="btn small" id="btnReplay" title="Restart the out-of-sample tape">Replay tape</button>
+      </header>
+      <canvas id="cvPaper" class="cv tall"></canvas>
+      <dl class="kv cols" id="paperStats"></dl>
+      <div class="fills-head"><h3>Execution log</h3><span class="hint">newest first</span></div>
+      <ol class="fills mono" id="fillLog"></ol>
+    </section>
+
+    <section class="panel span-4" id="panelTape">
+      <header class="panel-head"><h2>Tape</h2><span class="hint" id="tapeInterval"></span></header>
+      <div class="tape-title" id="tapeTitle"></div>
+      <canvas id="cvTape" class="cv short"></canvas>
+      <dl class="kv" id="tapeStats"></dl>
+      <div class="notice" id="tapeNotice" hidden></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p><strong>Desk SETS</strong> is a transparent research toy for watching evolutionary search work on a small equities watchlist. It never connects to a brokerage, holds no keys, and moves no money. The out-of-sample window is short, the leader is chosen using that same window, and buy &amp; hold is shown for comparison on purpose. Inspired by the architecture of SETS MACHINE; not affiliated.</p>
+    <p class="hint">Keys: <kbd>Space</kbd> run/pause · <kbd>→</kbd> step · <kbd>1</kbd>–<kbd>4</kbd> speed · <kbd>Esc</kbd> back to leader · URL: <code>?ticker=NVDA&amp;seed=42&amp;speed=4&amp;warm=50&amp;paused</code></p>
+  </footer>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
