@@ -1,0 +1,45 @@
+name: Refresh candles
+
+# Re-fetches dist/data/*.js from Yahoo Finance with the stdlib-only tool and
+# commits the result. Runs on demand, weekly, and on any push that lacks data
+# (so a fresh clone of the code alone bootstraps itself).
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1" # Mondays 06:17 UTC, after the weekend
+  push:
+    branches: [main]
+    paths:
+      - "tools/fetch_data.py"
+      - ".github/workflows/refresh-data.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Fetch hourly candles for the watchlist
+        run: python tools/fetch_data.py
+      - name: Run engine tests against the fresh tape
+        run: node --test tests/*.test.mjs
+      - name: Commit if anything changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dist/data
+          if git diff --cached --quiet; then
+            echo "candles unchanged"
+          else
+            git commit -m "data: refresh candles $(date -u +%Y-%m-%d)"
+            git push
+          fi
